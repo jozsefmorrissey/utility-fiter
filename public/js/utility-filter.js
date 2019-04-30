@@ -54,7 +54,7 @@ function filterSelects(id) {
   for (let cIndex = 0; cIndex < Object.keys(state).length; cIndex += 1) {
     const column = Object.keys(state)[cIndex];
     const columnObj = state[column];
-    const selectId = `${getSelectId(id, column)}_itemList`;
+    const selectId = `${getSelectId(dataMap[id].id, column)}_itemList`;
     if (columnObj.type == SEARCH_TYPES.SELECT) {
       const list = document.getElementById(selectId).querySelectorAll('.multiselect-checkbox');
       for (let eIndex = 1; eIndex < list.length; eIndex += 1) {
@@ -157,8 +157,8 @@ function mapArray(data, name) {
 }
 
 function buildHeader(id) {
-  let uniqueId = buildId('radio', id, SEARCH_TYPES.ALL);
-  const inputId = buildId('input', id, SEARCH_TYPES.ALL);
+  let uniqueId = buildId('radio', dataMap[id].id, SEARCH_TYPES.ALL);
+  const inputId = buildId('input', dataMap[id].id, SEARCH_TYPES.ALL);
   const likeId = buildId(uniqueId, SEARCH_TYPES.LIKE);
   const regexId = buildId(uniqueId, SEARCH_TYPES.REGEX);
   let header = `<div>
@@ -175,8 +175,8 @@ function buildHeader(id) {
 
 function updateAllState(e) {
   const id = splitId(e.id)[1];
-  const uniqueId = buildId('radio', id, SEARCH_TYPES.ALL);
-  const inputId = buildId('input', id, SEARCH_TYPES.ALL);
+  const uniqueId = buildId('radio', dataMap[id].id, SEARCH_TYPES.ALL);
+  const inputId = buildId('input', dataMap[id].id, SEARCH_TYPES.ALL);
 
   if (states[id][SEARCH_TYPES.ALL] === undefined) {
     states[id][SEARCH_TYPES.ALL] = {};
@@ -224,13 +224,13 @@ function buildMenu(id) {
   let menu = '';
   for (let index = 0; index < columns.length; index += 1) {
     const column = columns[index];
-    const uniqueId = buildId('radio', id, column);//`${id}-${column}-radio`;
+    const uniqueId = buildId('radio', dataMap[id].id, column);//`${id}-${column}-radio`;
     const selectId = buildId(uniqueId, SEARCH_TYPES.SELECT);//`${uniqueId}-${SEARCH_TYPES.SELECT}`;
     const likeId = buildId(uniqueId, SEARCH_TYPES.LIKE);
     const regexId = buildId(uniqueId, SEARCH_TYPES.REGEX);
-    const textId = buildId('input', id, column, 'text');
+    const textId = buildId('input', dataMap[id].id, column, 'text');
     setState(id, column, SEARCH_TYPES.SELECT);
-    let datalist = `<select class='multi-select-column' id='${getSelectId(id, column)}' multiple>`;
+    let datalist = `<select class='multi-select-column' id='${getSelectId(dataMap[id].id, column)}' multiple>`;
     for (let uIndex = 0; uIndex < columnsObj[column].length; uIndex += 1) {
       let value = columnsObj[column][uIndex];
       datalist += `<option value='${value}'>${value}</option>`
@@ -268,7 +268,20 @@ function buildBody(data, id) {
   return body;
 }
 
-function buildTable(data, id) {
+function hideAll(id) {
+  const elems = document.getElementById(`utility-filter-${dataMap[id].ufId}`).getElementsByClassName('tab-ctn');
+  for (let index = 0; index < elems.length; index += 1) {
+    const elem = elems[index];
+    elem.style.display = 'none';
+  }
+}
+
+function displayTable(id) {
+  hideAll(id);
+  document.getElementById(`${dataMap[id].id}-cnt`).style.display = 'block';
+}
+
+function buildTable(id, data) {
   let table = "<table><tr>"
   table += buildMenu(id);
   table += '</tr><tbody>';
@@ -285,30 +298,55 @@ function multiSelectSetup(id) {
     for (let index = 0; index < columns.length; index += 1) {
       column = columns[index];
       for (let uIndex = 0; uIndex < columnsObj[column].length; uIndex += 1) {
-        document.multiselect(`#${getSelectId(id, column)}`);
+        document.multiselect(`#${getSelectId(dataMap[id].id, column)}`);
       }
     }
   }
 }
 
+function buildTabs(ids) {
+  let tabs = '';
+  for (let i = 0; i < ids.length; i += 1) {
+    tabs += `<a onclick='displayTable("${ids[i]}")'>${ids[i]}</a>`
+  }
+  return tabs;
+}
+
 function onLoad() {
   let elems = document.getElementsByTagName('utility-filter');
+  let ufId = 0;
   for (index = 0; index < elems.length; index += 1) {
     let elem = elems[index];
+    elem.id = `utility-filter-${ufId}`;
     let data = JSON.parse(elem.innerText);
     if (Array.isArray(data)) {
       elem.innerHTML = "";
       elem.style.display = 'block';
-      dataMap[unnamedCount] = { elem, data, columns: mapArray(data)};
+      dataMap[unnamedCount] = { elem, data, id: unnamedCount, columns: mapArray(data)};
+
       let display = buildHeader(unnamedCount);
-      // display += buildMenu(unnamedCount);
-      display += buildTable(dataMap[unnamedCount].data, unnamedCount);
+      display += buildTable(unnamedCount, dataMap[unnamedCount].data);
+
       elem.innerHTML = display;
-
       setTimeout(multiSelectSetup(unnamedCount), 0);
-
-      console.log(dataMap);
       unnamedCount += 1;
+    } else if (typeof data === 'object') {
+      const keys = Object.keys(data);
+      elem.innerHTML = "";
+      elem.style.display = 'block';
+      let display = buildTabs(keys);
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        dataMap[key] = { elem, ufId, data: data[key], id: unnamedCount, columns: mapArray(data[key])};
+        display += `<div class='tab-ctn' id='${unnamedCount}-cnt'>`;
+        display += buildHeader(key);
+        display += buildTable(key, dataMap[key].data);
+        display += '</div>';
+        setTimeout(multiSelectSetup(key), 0);
+        unnamedCount += 1;
+      }
+
+      elem.innerHTML = display;
     }
   }
   document.body.onclick= function(e){

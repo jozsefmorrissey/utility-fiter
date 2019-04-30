@@ -1,0 +1,23 @@
+{
+  "name": "utility-fiter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "static-server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jozsefmorrissey/utility-fiter.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jozsefmorrissey/utility-fiter/issues"
+  },
+  "homepage": "https://github.com/jozsefmorrissey/utility-fiter#readme",
+  "dependencies": {
+    "express": "^4.16.4",
+    "shelljs": "^0.8.3"
+  }
+}
