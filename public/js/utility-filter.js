@@ -307,7 +307,7 @@ function multiSelectSetup(id) {
 function buildTabs(ids) {
   let tabs = '';
   for (let i = 0; i < ids.length; i += 1) {
-    tabs += `<a onclick='displayTable("${ids[i]}")'>${ids[i]}</a>`
+    tabs += `<div class='tab'><a onclick='displayTable("${ids[i]}")'>${ids[i]}</a></div>`
   }
   return tabs;
 }
@@ -345,8 +345,9 @@ function onLoad() {
         setTimeout(multiSelectSetup(key), 0);
         unnamedCount += 1;
       }
-
       elem.innerHTML = display;
+      ufId++;
+      displayTable(keys[0])
     }
   }
   document.body.onclick= function(e){

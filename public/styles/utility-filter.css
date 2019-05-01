@@ -1,0 +1,8 @@
+.tab {
+  border: solid;
+  display: inline-grid;
+  padding: 5pt 10pt;
+  border-top-left-radius: 10pt;
+  border-style: ridge;
+  border-width: 2pt;
+}
