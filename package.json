@@ -17,7 +17,10 @@
   },
   "homepage": "https://github.com/jozsefmorrissey/utility-fiter#readme",
   "dependencies": {
+    "ejs": "^2.6.1",
     "express": "^4.16.4",
+    "marko": "^4.16.13",
+    "pug": "^2.0.3",
     "shelljs": "^0.8.3"
   }
 }

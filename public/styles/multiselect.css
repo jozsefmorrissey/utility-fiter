@@ -120,14 +120,6 @@ td, th {
 	text-align: center;
 }
 
-.tr-odd {
-	background-color: gainsboro;
-}
-
-.tr-even {
-	background-color: white;
-}
-
 tbody {
 	border: solid;
 	border-width: 1pt;

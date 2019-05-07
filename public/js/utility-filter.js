@@ -12,6 +12,18 @@ let unnamedCount = 1;
 const states = {};
 states[SEARCH_TYPES.ALL] = {};
 
+function save(id) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', `http://localhost:3500/${id}`);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function() {
+      if (xhr.status === 200) {
+          var userInfo = JSON.parse(xhr.responseText);
+      }
+  };
+  xhr.send(JSON.stringify(dataMap[id].data));
+}
+
 function getRating(text, userValue, type) {
   let asStr = String(text);
   switch (type) {
@@ -218,6 +230,10 @@ function getSelectId(id, column) {
   return buildId('selector', id, column);
 }
 
+function removeColumn(id, index) {
+  dataMap[id].hide.push(index);
+}
+
 function buildMenu(id) {
   const columnsObj = dataMap[id].columns;
   const columns = Object.keys(columnsObj);
@@ -236,32 +252,36 @@ function buildMenu(id) {
       datalist += `<option value='${value}'>${value}</option>`
     }
     datalist += '</select>';
-    menu += `<th>
-                <label>${column}</label>
-                <br>
-                <input hidden type='text' id='${textId}'>
-                ${datalist}
-                <br>
-                <label>s</label>
-                <input type='radio' name='${uniqueId}' id='${selectId}' value='${SEARCH_TYPES.SELECT}' checked>
-                <label>l</label>
-                <input type='radio' name='${uniqueId}' id='${likeId}' value='${SEARCH_TYPES.LIKE}'>
-                <label>r</label>
-                <input type='radio' name='${uniqueId}' id='${regexId}' value='${SEARCH_TYPES.REGEX}'>
-              </th>`;
+    menu += `<th class='relative column-${index}'>
+    <label>${column}</label>
+    <br>
+    <input hidden type='text' id='${textId}'>
+    ${datalist}
+    <br>
+    <label>s</label>
+    <input type='radio' name='${uniqueId}' id='${selectId}' value='${SEARCH_TYPES.SELECT}' checked>
+    <label>l</label>
+    <input type='radio' name='${uniqueId}' id='${likeId}' value='${SEARCH_TYPES.LIKE}'>
+    <label>r</label>
+    <input type='radio' name='${uniqueId}' id='${regexId}' value='${SEARCH_TYPES.REGEX}'>
+    <button class='close-btn' onclick='removeColumn("${id}", ${index})'>X</button>
+    </th>`;
   }
   return menu;
 }
 
+let lookUpId = 0;
+const lookUpObj = {};
 function buildBody(data, id) {
   let body = '';
   const keys = Object.keys(dataMap[id].columns)
   let count = 1;
   for (let index = 0; index < data.length; index += 1) {
     const clazz = count++ % 2 === 0 ? 'tr-even' : 'tr-odd';
-    body += `<tr class='${clazz}'>`;
+    lookUpObj[lookUpId] = {id, data: data[index]};
+    body += `<tr look-up-id='${lookUpId++}' onclick='openPopUp(this)' class='${clazz}'>`;
     for(let kIndex = 0; kIndex < keys.length; kIndex += 1) {
-      body += `<td>${data[index][keys[kIndex]]}</td>`
+      body += `<td class='column-${kIndex}'>${data[index][keys[kIndex]]}</td>`
     }
     body += '</tr>';
   }
@@ -276,15 +296,18 @@ function hideAll(id) {
   }
 }
 
-function displayTable(id) {
+function displayTable(id, anchor) {
   hideAll(id);
-  document.getElementById(`${dataMap[id].id}-cnt`).style.display = 'block';
+  document.getElementById(`utility-filter-${dataMap[id].ufId}`).querySelector('.tab-active').classList.remove('tab-active');
+  let elem = document.getElementById(`${dataMap[id].id}-cnt`);
+  elem.style.display = 'block';
+  anchor.classList.add('tab-active');
 }
 
 function buildTable(id, data) {
   let table = "<table><tr>"
   table += buildMenu(id);
-  table += '</tr><tbody>';
+  table += `'</tr><tbody id='tbody-${id}'>`;
   table += buildBody(data, id);
   table += '</tbody></table>';
 
@@ -304,25 +327,74 @@ function multiSelectSetup(id) {
   }
 }
 
-function buildTabs(ids) {
-  let tabs = '';
+function buildTabs(ids, startIndex) {
+  let tabs = ['<ul class="nav nav-tabs">'];
   for (let i = 0; i < ids.length; i += 1) {
-    tabs += `<div class='tab'><a onclick='displayTable("${ids[i]}")'>${ids[i]}</a></div>`
+    let clazz = 'tab';
+    if (i === 0) {
+      clazz += ' tab-active';
+    }
+    tabs.push(`<li class="active"><a id='tab-${startIndex + i}' class='${clazz}' onclick='displayTable("${startIndex + i}", this)'>${ids[i]}</a></li>`);
   }
-  return tabs;
+  return tabs.join('') + "</ul>";
+}
+
+function closePopUp() {
+    const haze = document.querySelector('#pop-up-haze');
+    const id = haze.querySelector('look-up-id').id;
+    sort(lookUpObj[id].id);
+    haze.style.display = 'none';
+}
+
+function updateData(elem, id, label) {
+  lookUpObj[id].data[label] = elem.value;
+}
+
+let edit = true;
+function openPopUp(elem) {
+    let headers = elem.parentElement.parentElement.querySelectorAll('th');
+    let values = elem.querySelectorAll('td');
+    const id = elem.attributes['look-up-id'].value;
+    let body = `<look-up-id id='${id}'></look-up-id>`;
+    for (let index = 0; index < headers.length; index += 1) {
+      const value = values[index].innerText;
+      const label = headers[index].querySelector('label').innerText.trim();
+      body += `<label>
+                  ${label}:
+              </label>`;
+      if (edit) {
+        body += `<br><textarea onchange='updateData(this, ${id}, "${label}")'>${value}</textarea><br>`;
+      } else {
+        body += ` ${value}<br>`
+      }
+    }
+    document.querySelector('#pop-up').innerHTML = body;
+    document.querySelector('#pop-up-haze').style.display = 'block';
+}
+
+function buildPopUp() {
+  let haze = document.createElement('div');
+  haze.id = 'pop-up-haze';
+  haze.onclick = closePopUp;
+  haze.style.display = 'none';
+  haze.innerHTML = `<div onclick='stopPropagation()' id='pop-up'><h2>Pop Up</h2></div></div>`;
+  return haze;
 }
 
 function onLoad() {
   let elems = document.getElementsByTagName('utility-filter');
   let ufId = 0;
+  let objectId = 0;
   for (index = 0; index < elems.length; index += 1) {
     let elem = elems[index];
     elem.id = `utility-filter-${ufId}`;
+    let tableId;
     let data = JSON.parse(elem.innerText);
     if (Array.isArray(data)) {
+      tableId = unnamedCount;
       elem.innerHTML = "";
       elem.style.display = 'block';
-      dataMap[unnamedCount] = { elem, data, id: unnamedCount, columns: mapArray(data)};
+      dataMap[unnamedCount] = { elem, hide:[], objectId, data, id: unnamedCount, columns: mapArray(data)};
 
       let display = buildHeader(unnamedCount);
       display += buildTable(unnamedCount, dataMap[unnamedCount].data);
@@ -331,25 +403,32 @@ function onLoad() {
       setTimeout(multiSelectSetup(unnamedCount), 0);
       unnamedCount += 1;
     } else if (typeof data === 'object') {
+      tableId = unnamedCount;
       const keys = Object.keys(data);
       elem.innerHTML = "";
       elem.style.display = 'block';
-      let display = buildTabs(keys);
+      let display = buildTabs(keys, unnamedCount);
       for (let index = 0; index < keys.length; index += 1) {
         const key = keys[index];
-        dataMap[key] = { elem, ufId, data: data[key], id: unnamedCount, columns: mapArray(data[key])};
+        dataMap[String(unnamedCount)] = { elem, objectId, hide:[], ufId, data: data[key], id: unnamedCount, columns: mapArray(data[key]), name: key };
         display += `<div class='tab-ctn' id='${unnamedCount}-cnt'>`;
-        display += buildHeader(key);
-        display += buildTable(key, dataMap[key].data);
-        display += '</div>';
-        setTimeout(multiSelectSetup(key), 0);
+        display += buildHeader(unnamedCount);
+        display += buildTable(unnamedCount, dataMap[String(unnamedCount)].data);
+        display += '</div>';key
+        setTimeout(multiSelectSetup(unnamedCount), 0);
         unnamedCount += 1;
       }
-      elem.innerHTML = display;
+      elem.innerHTML = `<div>${display}<button onclick='save("${objectId}")'>save</button></div>`;
       ufId++;
-      displayTable(keys[0])
+      displayTable(tableId, document.querySelector(`#tab-${tableId}`));
+      objectId++;
     }
   }
+  document.querySelector('body').appendChild(buildPopUp());
+
+  document.querySelector('#pop-up').addEventListener('click', function(event){
+    event.stopPropagation();
+  });
   document.body.onclick= function(e){
      e=window.event? event.srcElement: e.target;
      if(e.tagName.toLowerCase() == 'input' && e.type.toLowerCase() === 'radio')radioUpdate(e);
@@ -423,7 +502,7 @@ function sort(id) {
   let filtered = filterRows(id);
   filtered.sort(function (a, b) {return b.rowRating - a.rowRating});
   filtered = Array.from(filtered).map(el => el.candidate);
-  dataMap[id].elem.querySelectorAll('tbody')[1].innerHTML = buildBody(filtered, id);
+  dataMap[id].elem.querySelector(`#tbody-${id}`).innerHTML = buildBody(filtered, id);
 }
 
 let updatePending = false;
@@ -481,5 +560,7 @@ var style = document.createElement("link");
 style.href = 'https://jozsefmorrissey.github.io/not-related/utility-filter/styles/multiselect.css';
 style.rel = 'stylesheet';
 document.head.appendChild(style);
+
+console.log("rt: " + document.currentScript.getAttribute('run-type'));
 
 window.addEventListener('load', onLoad);
