@@ -18,6 +18,7 @@
 
 .relative {
   position: relative;
+  text-align: center;
 }
 
 .close-btn {
@@ -55,4 +56,16 @@
   text-align: center;
   background:rgba(0,0,0,0.6);
   padding: 20pt;
+}
+
+.search-all-ctn {
+	position: relative;
+	padding: 10pt;
+}
+
+.recover-ctn {
+	position: absolute;
+  right: 0;
+  top: 0;
+  padding: 10pt;
 }

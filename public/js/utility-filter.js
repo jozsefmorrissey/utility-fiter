@@ -11,6 +11,7 @@ const dataMap = {};
 let unnamedCount = 1;
 const states = {};
 states[SEARCH_TYPES.ALL] = {};
+const objectLookup = [];
 
 function save(id) {
   var xhr = new XMLHttpRequest();
@@ -21,7 +22,7 @@ function save(id) {
           var userInfo = JSON.parse(xhr.responseText);
       }
   };
-  xhr.send(JSON.stringify(dataMap[id].data));
+  xhr.send(JSON.stringify(objectLookup[id]));
 }
 
 function getRating(text, userValue, type) {
@@ -168,19 +169,46 @@ function mapArray(data, name) {
   return columns;
 }
 
+function recover(id, inputElem) {
+  console.log(id);
+  const index = Number.parseInt(inputElem.value);
+  dataMap[id].hide.splice(dataMap[id].hide.indexOf(index), 1);
+  document.getElementById(getTabCtnId(id)).querySelectorAll('th')[index].style.display = 'table-cell';
+  document.getElementById(`recover-select-ctn-${id}`).innerHTML = recoverSelect(id);
+  sort(id);
+}
+
+function recoverSelect(id) {
+  const hidden = dataMap[id].hide;
+  const recoverId = `recover-${id}`;
+  let select = `<input onchange='recover(${id}, this)' list="${recoverId}"><datalist id='${recoverId}'>`;
+  for (let index = 0; index < hidden.length; index += 1) {
+    const key = hidden[index];
+    const columnIds = Object.keys(dataMap[id].columns);
+    select += `<option value='${key}'>${columnIds[key]}</option>`;
+  }
+  return `${select}</datalist>`;
+}
+
 function buildHeader(id) {
   let uniqueId = buildId('radio', dataMap[id].id, SEARCH_TYPES.ALL);
   const inputId = buildId('input', dataMap[id].id, SEARCH_TYPES.ALL);
   const likeId = buildId(uniqueId, SEARCH_TYPES.LIKE);
   const regexId = buildId(uniqueId, SEARCH_TYPES.REGEX);
-  let header = `<div>
+  let header = `<div class='search-all-ctn'>
               <label>Search All: </label>
               <input onkeyup='updateAllState(this)' id='${inputId}' type='text'>
               <label>Like</label>
               <input onclick='updateAllState(this)' type='radio' name='${uniqueId}' id='${likeId}' value='${SEARCH_TYPES.LIKE}' checked>
               <label>Regex</label>
               <input type='radio' name='${uniqueId}' id='${regexId}' value='${SEARCH_TYPES.REGEX}'>
-            </div><br>`;
+              <div class='recover-ctn'>
+                <label>recover</label>
+                <div id='recover-select-ctn-${id}'>
+                  ${recoverSelect(id)}
+                </div>
+              </div>
+            </div>`;
 
   return header;
 }
@@ -232,6 +260,9 @@ function getSelectId(id, column) {
 
 function removeColumn(id, index) {
   dataMap[id].hide.push(index);
+  document.getElementById(getTabCtnId(id)).querySelectorAll('th')[index].style.display = 'none';
+  document.getElementById(`recover-select-ctn-${id}`).innerHTML = recoverSelect(id);
+  sort(id);
 }
 
 function buildMenu(id) {
@@ -252,6 +283,7 @@ function buildMenu(id) {
       datalist += `<option value='${value}'>${value}</option>`
     }
     datalist += '</select>';
+
     menu += `<th class='relative column-${index}'>
     <label>${column}</label>
     <br>
@@ -271,17 +303,22 @@ function buildMenu(id) {
 }
 
 let lookUpId = 0;
-const lookUpObj = {};
+const lookUpRow = {};
 function buildBody(data, id) {
   let body = '';
   const keys = Object.keys(dataMap[id].columns)
   let count = 1;
   for (let index = 0; index < data.length; index += 1) {
     const clazz = count++ % 2 === 0 ? 'tr-even' : 'tr-odd';
-    lookUpObj[lookUpId] = {id, data: data[index]};
+    lookUpRow[lookUpId] = {id, data: data[index]};
     body += `<tr look-up-id='${lookUpId++}' onclick='openPopUp(this)' class='${clazz}'>`;
     for(let kIndex = 0; kIndex < keys.length; kIndex += 1) {
-      body += `<td class='column-${kIndex}'>${data[index][keys[kIndex]]}</td>`
+      const column = keys[kIndex];
+      let display = 'table-cell';
+      if (dataMap[id].hide.indexOf(kIndex) !== -1) {
+        display = 'none';
+      }
+      body += `<td style='display: ${display};' class='column-${kIndex}'>${data[index][column]}</td>`
     }
     body += '</tr>';
   }
@@ -289,7 +326,7 @@ function buildBody(data, id) {
 }
 
 function hideAll(id) {
-  const elems = document.getElementById(`utility-filter-${dataMap[id].ufId}`).getElementsByClassName('tab-ctn');
+  const elems = document.getElementById(dataMap[id].ufId).getElementsByClassName('tab-ctn');
   for (let index = 0; index < elems.length; index += 1) {
     const elem = elems[index];
     elem.style.display = 'none';
@@ -298,8 +335,8 @@ function hideAll(id) {
 
 function displayTable(id, anchor) {
   hideAll(id);
-  document.getElementById(`utility-filter-${dataMap[id].ufId}`).querySelector('.tab-active').classList.remove('tab-active');
-  let elem = document.getElementById(`${dataMap[id].id}-cnt`);
+  document.getElementById(dataMap[id].ufId).querySelector('.tab-active').classList.remove('tab-active');
+  let elem = document.getElementById(`${getTabCtnId(dataMap[id].id)}`);
   elem.style.display = 'block';
   anchor.classList.add('tab-active');
 }
@@ -336,18 +373,19 @@ function buildTabs(ids, startIndex) {
     }
     tabs.push(`<li class="active"><a id='tab-${startIndex + i}' class='${clazz}' onclick='displayTable("${startIndex + i}", this)'>${ids[i]}</a></li>`);
   }
+  tabs.push(`<li class="active"><a id='tab-add' class='tab' onclick='addTable(this)'>+</a></li>`);
   return tabs.join('') + "</ul>";
 }
 
 function closePopUp() {
     const haze = document.querySelector('#pop-up-haze');
     const id = haze.querySelector('look-up-id').id;
-    sort(lookUpObj[id].id);
+    sort(lookUpRow[id].id);
     haze.style.display = 'none';
 }
 
 function updateData(elem, id, label) {
-  lookUpObj[id].data[label] = elem.value;
+  lookUpRow[id].data[label] = elem.value;
 }
 
 let edit = true;
@@ -381,20 +419,30 @@ function buildPopUp() {
   return haze;
 }
 
+function getTabCtnId(id) {
+  return `tab-cnt-${id};`
+}
+
+function addRow(strId) {
+  const id = Number.parseInt(strId);
+  dataMap[id].data.push({});
+  sort(id);
+}
+
 function onLoad() {
   let elems = document.getElementsByTagName('utility-filter');
   let ufId = 0;
-  let objectId = 0;
   for (index = 0; index < elems.length; index += 1) {
     let elem = elems[index];
-    elem.id = `utility-filter-${ufId}`;
+    elem.id = elem.id ? elem.id : `utility-filter-${ufId}`;
     let tableId;
     let data = JSON.parse(elem.innerText);
+    objectLookup[elem.id] = data;
     if (Array.isArray(data)) {
       tableId = unnamedCount;
       elem.innerHTML = "";
       elem.style.display = 'block';
-      dataMap[unnamedCount] = { elem, hide:[], objectId, data, id: unnamedCount, columns: mapArray(data)};
+      dataMap[unnamedCount] = { elem, ufId: elem.id, hide:[], data, id: unnamedCount, columns: mapArray(data)};
 
       let display = buildHeader(unnamedCount);
       display += buildTable(unnamedCount, dataMap[unnamedCount].data);
@@ -410,18 +458,18 @@ function onLoad() {
       let display = buildTabs(keys, unnamedCount);
       for (let index = 0; index < keys.length; index += 1) {
         const key = keys[index];
-        dataMap[String(unnamedCount)] = { elem, objectId, hide:[], ufId, data: data[key], id: unnamedCount, columns: mapArray(data[key]), name: key };
-        display += `<div class='tab-ctn' id='${unnamedCount}-cnt'>`;
+        dataMap[String(unnamedCount)] = { elem, hide:[], ufId: elem.id, data: data[key], id: unnamedCount, columns: mapArray(data[key]), name: key };
+        display += `<div class='tab-ctn' id='${getTabCtnId(unnamedCount)}'>`;
         display += buildHeader(unnamedCount);
         display += buildTable(unnamedCount, dataMap[String(unnamedCount)].data);
-        display += '</div>';key
+        display += `<button onclick='addRow("${unnamedCount}")'>add</button></div>`;
+        display += '</div>';
         setTimeout(multiSelectSetup(unnamedCount), 0);
         unnamedCount += 1;
       }
-      elem.innerHTML = `<div>${display}<button onclick='save("${objectId}")'>save</button></div>`;
+      elem.innerHTML = `<div>${display}<button onclick='save("${elem.id}")'>save</button>`;
       ufId++;
       displayTable(tableId, document.querySelector(`#tab-${tableId}`));
-      objectId++;
     }
   }
   document.querySelector('body').appendChild(buildPopUp());
