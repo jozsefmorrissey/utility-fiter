@@ -3,7 +3,6 @@ const shell = require('shelljs');
 var bodyParser = require('body-parser');
 const fs = require('fs');
 
-
 var app = express();
 app.use(bodyParser.json()); // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true }));

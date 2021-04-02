@@ -8,7 +8,7 @@ const SEARCH_TYPES = {
 };
 
 const dataMap = {};
-let unnamedCount = 1;
+let tableId = 1;
 const states = {};
 states[SEARCH_TYPES.ALL] = {};
 const objectLookup = [];
@@ -364,17 +364,44 @@ function multiSelectSetup(id) {
   }
 }
 
-function buildTabs(ids, startIndex) {
-  let tabs = ['<ul class="nav nav-tabs">'];
+function addTable(index, ufid) {
+  const elem = document.getElementById(getTabId(index));
+  const key = "new";
+  const ufElem = elem.parentNode.parentNode;
+  const data = [];
+  objectLookup[ufid][key] = data;
+  const ids = Object.keys(objectLookup[ufid]);
+  dataMap[String(tableId)] = { elem: ufElem, hide:[], ufId: ufElem.id, data: data, id: tableId, columns: mapArray(data), name: key };
+  let newTab = buildTab(tableId, key, 'tab');
+  elem.innerHTML = insert(elem, newTab, -1).join("");
+  let table = buildHeader(tableId);
+  table += buildTable(tableId, dataMap[String(tableId)].data);
+  table = addButton(tableId, table);
+  const temp = document.createElement('div');
+  temp.innerHTML = table;
+  ufElem.appendChild(temp);
+  tableId += 1;
+}
+
+function getTabId(index) {
+  return `nav-tabs-${index}`;
+}
+
+function buildTab(index, id, clazz) {
+  return `<li class="active"><a id='tab-${index}' class='${clazz}' onclick='displayTable("${index}", this)'>${id}</a></li>`;
+}
+
+function buildTabs(ids, startIndex, ufid) {
+  let tabs = [];
   for (let i = 0; i < ids.length; i += 1) {
     let clazz = 'tab';
     if (i === 0) {
       clazz += ' tab-active';
     }
-    tabs.push(`<li class="active"><a id='tab-${startIndex + i}' class='${clazz}' onclick='displayTable("${startIndex + i}", this)'>${ids[i]}</a></li>`);
+    tabs.push(buildTab(startIndex + i, ids[i], clazz));
   }
-  tabs.push(`<li class="active"><a id='tab-add' class='tab' onclick='addTable(this)'>+</a></li>`);
-  return tabs.join('') + "</ul>";
+  tabs.push(`<li class="active"><a id='tab-add' class='tab' onclick='addTable(${startIndex}, "${ufid}")'>+</a></li>`);
+  return tabs.join('');
 }
 
 function closePopUp() {
@@ -410,6 +437,20 @@ function openPopUp(elem) {
     document.querySelector('#pop-up-haze').style.display = 'block';
 }
 
+function insert(elem, newElem, index) {
+    let len = elem.childNodes.length;
+    while (index < 0) index += len;
+  index = index % len;
+    let nodes = [];
+    for (let i = 0; i < len; i += 1) {
+        if (i == index) {
+            nodes.push(newElem);
+        }
+        nodes.push(elem.childNodes[i].outerHTML);
+    }
+    return nodes;
+}
+
 function buildPopUp() {
   let haze = document.createElement('div');
   haze.id = 'pop-up-haze';
@@ -429,47 +470,66 @@ function addRow(strId) {
   sort(id);
 }
 
+function buildArray(elem, data) {
+  elem.innerHTML = "";
+  elem.style.display = 'block';
+  dataMap[tableId] = { elem, ufId: elem.id, hide:[], data, id: tableId, columns: mapArray(data)};
+
+  let display = buildHeader(tableId);
+  display += buildTable(tableId, dataMap[tableId].data);
+  display = addButton(tableId, display);
+
+  elem.innerHTML = saveButton(display, elem.id);
+  setTimeout(multiSelectSetup(tableId), 0);
+}
+
+function addButton(tableId, display) {
+  let ret = `<div class='tab-ctn' id='${getTabCtnId(tableId)}'>`;
+  ret += display;
+  ret += `<button onclick='addRow("${tableId}")'>add</button></div>`;
+  ret += '</div>';
+  return ret;
+}
+
+function saveButton(display, id) {
+  return `<div>${display}<button onclick='save("${id}")'>save</button>`;
+}
+
+function buildObject(data, elem) {
+  const keys = Object.keys(data);
+  elem.innerHTML = "";
+  elem.style.display = 'block';
+  let display = `<ul class="nav nav-tabs" id='${getTabId(tableId)}'>`;
+  display += buildTabs(keys, tableId, elem.id) + "</ul>";
+  let initialTableId = tableId;
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
+    dataMap[String(tableId)] = { elem, hide:[], ufId: elem.id, data: data[key], id: tableId, columns: mapArray(data[key]), name: key };
+    let table = buildHeader(tableId);
+    table += buildTable(tableId, dataMap[String(tableId)].data);
+    table = addButton(tableId, table);
+    display += table;
+    setTimeout(multiSelectSetup(tableId), 0);
+    tableId += 1;
+  }
+  elem.innerHTML = saveButton(display, elem.id);
+  displayTable(initialTableId, document.querySelector(`#tab-${initialTableId}`));
+}
+
 function onLoad() {
   let elems = document.getElementsByTagName('utility-filter');
   let ufId = 0;
   for (index = 0; index < elems.length; index += 1) {
     let elem = elems[index];
     elem.id = elem.id ? elem.id : `utility-filter-${ufId}`;
-    let tableId;
     let data = JSON.parse(elem.innerText);
     objectLookup[elem.id] = data;
     if (Array.isArray(data)) {
-      tableId = unnamedCount;
-      elem.innerHTML = "";
-      elem.style.display = 'block';
-      dataMap[unnamedCount] = { elem, ufId: elem.id, hide:[], data, id: unnamedCount, columns: mapArray(data)};
-
-      let display = buildHeader(unnamedCount);
-      display += buildTable(unnamedCount, dataMap[unnamedCount].data);
-
-      elem.innerHTML = display;
-      setTimeout(multiSelectSetup(unnamedCount), 0);
-      unnamedCount += 1;
-    } else if (typeof data === 'object') {
-      tableId = unnamedCount;
-      const keys = Object.keys(data);
-      elem.innerHTML = "";
-      elem.style.display = 'block';
-      let display = buildTabs(keys, unnamedCount);
-      for (let index = 0; index < keys.length; index += 1) {
-        const key = keys[index];
-        dataMap[String(unnamedCount)] = { elem, hide:[], ufId: elem.id, data: data[key], id: unnamedCount, columns: mapArray(data[key]), name: key };
-        display += `<div class='tab-ctn' id='${getTabCtnId(unnamedCount)}'>`;
-        display += buildHeader(unnamedCount);
-        display += buildTable(unnamedCount, dataMap[String(unnamedCount)].data);
-        display += `<button onclick='addRow("${unnamedCount}")'>add</button></div>`;
-        display += '</div>';
-        setTimeout(multiSelectSetup(unnamedCount), 0);
-        unnamedCount += 1;
-      }
-      elem.innerHTML = `<div>${display}<button onclick='save("${elem.id}")'>save</button>`;
+      buildArray(elem, data);
       ufId++;
-      displayTable(tableId, document.querySelector(`#tab-${tableId}`));
+    } else if (typeof data === 'object') {
+      buildObject(data, elem);
+      ufId++;
     }
   }
   document.querySelector('body').appendChild(buildPopUp());

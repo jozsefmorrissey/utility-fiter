@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src='/js/part-creator.js'></script>
+    <script type='text/javascript'>
+    function init() {
+      var c = document.getElementById("part-canvas");
+      var ctx = c.getContext("2d");
+      ctx.moveTo(0, 0);
+      ctx.lineTo(200, 100);
+      ctx.stroke();
+    }
+    window.onload = init;
+    </script>
+    <title></title>
+  </head>
+  <body>
+    <canvas id="part-canvas" style='width: 100vw; height: 100vh'></canvas>
+  </body>
+</html>
