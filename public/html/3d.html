@@ -89,6 +89,9 @@
 				// const geometry = new THREE.Geometry();
 				// geometry.vertices.push(
 				// );
+				const colors = [0x0000ff, 0xff0000, 0x00ff00]
+				let count = 0;
+
 				function attrsEqual(obj1, obj2) {
 					const equalList = [];
 					for (let index = 2; index < arguments.length; index +=1) {
@@ -101,7 +104,7 @@
 				const sqrt = Math.sqrt;
 				const pow = Math.pow;
 				function distance(p1, p2) {
-					return sqrt(pow(p1.x - p2.x, 2) + pow(p1.z - p2.z, 2) + pow(p1.z - p2.z, 2));
+					return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2) + pow(p1.z - p2.z, 2));
 				}
 
 				function closer(target) {
@@ -140,24 +143,24 @@
 						const neighbors = [];
 						keys.forEach((key) => {
 							const value = closestPoints[key];
-							if (facesCovered[value.index] === undefined) facesCovered[value.index] = {};
-							if (facesCovered[value.index][key] === undefined) {
-								facesCovered[value.index][key] = true;
+							if (facesCovered[index1] === undefined) facesCovered[index1] = {};
+							if (facesCovered[index1][key] === undefined) {
+								facesCovered[index1][key] = true;
 								neighbors.push(value.index);
 							}
 						});
 						let indexes = [index1];
+						indexes.push(neighbors[0], neighbors[1]);
+						indexes.sort();
+						if (indexes[0] !== undefined && indexes[1] !== undefined && indexes[2] !== undefined)
+							faces[indexes.join()] = new THREE.Face3(...indexes);
+						indexes = [index1];
 						indexes.push(neighbors[1], neighbors[2]);
 						indexes.sort();
 						if (indexes[0] !== undefined && indexes[1] !== undefined && indexes[2] !== undefined)
 							faces[indexes.join()] = new THREE.Face3(...indexes);
 						indexes = [index1];
-						indexes.push(neighbors[2], neighbors[3]);
-						indexes.sort();
-						if (indexes[0] !== undefined && indexes[1] !== undefined && indexes[2] !== undefined)
-							faces[indexes.join()] = new THREE.Face3(...indexes);
-						indexes = [index1];
-						indexes.push(neighbors[1], neighbors[3]);
+						indexes.push(neighbors[0], neighbors[2]);
 						indexes.sort();
 						if (indexes[0] !== undefined && indexes[1] !== undefined && indexes[2] !== undefined)
 							faces[indexes.join()] = new THREE.Face3(...indexes);
@@ -167,11 +170,11 @@
 					geometry.vertices.push(...vectors);
 					geometry.faces.push(...Object.values(faces));
 
-					const material = new THREE.MeshBasicMaterial( {color: 0x0000ff, transparent: false,
-						side: THREE.DoubleSide} );
+					const material = new THREE.MeshBasicMaterial( {color: colors[count++ % colors.length],
+						transparent: false, side: THREE.DoubleSide} );
 					const cube2 = new THREE.Mesh( geometry, material );
 					cube2.rotation.x = Math.PI / 2;
-					scene.add( cube2 );
+					return cube2;
 				}
 
 				let points = [
@@ -192,8 +195,9 @@
 					{x: 0,y: 5,z: 0}, // 4
 					{x: 3,y: 5,z: 0}, // 5
 					{x: 3,y: 5,z: 1}, // 6
-					{x: 0,y: 5,z: 1}, // 7
-					{x: 3,y: 2,z: 0}, // 8
+					{x: 0,y: 5,z: 1} // 7
+				];
+				let dadoPts = [{x: 3,y: 2,z: 0}, // 8
 					{x: 3,y: 2,z: 1}, // 9
 					{x: 2,y: 2,z: 0}, // 10
 					{x: 2,y: 2,z: 1}, // 11
@@ -202,8 +206,18 @@
 					{x: 3,y: 3,z: 1}, // 14
 					{x: 3,y: 3,z: 0} // 15
 				];
-				renderSquaredObj(points);
 
+				// const part = renderSquaredObj(points);
+				// part.subtract(renderSquaredObj(dadoPts));
+				// scene.add(part);
+
+				const material = new THREE.MeshBasicMaterial( {color: colors[count++ % colors.length],
+					transparent: false, side: THREE.DoubleSide} );
+				var geom = new THREE.Geometry();
+geom.mergeMesh(new THREE.Mesh(new THREE.BoxGeometry(2,20,2)));
+geom.mergeMesh(new THREE.Mesh(new THREE.BoxGeometry(5,5,5)));
+geom.mergeVertices(); // optional
+scene.add(new THREE.Mesh(geom, material));
 
 				// 	// front
 				// 	new THREE.Face3(0, 2, 4),

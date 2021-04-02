@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <script src="/js/three.js"></script>
+    <script src="/lib/threeCsg/three-csg.js" type="module"></script>
+    <style>
+      body { margin: 0; }
+    </style>
+    <script type="module">
+      import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
+      import {CSG} from "/lib/threeCsg/three-csg.js";
+      const scene = new THREE.Scene();
+			const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+      const renderer = new THREE.WebGLRenderer();
+      const controls = new OrbitControls( camera, renderer.domElement );
+      const csg = new CSG();
+
+      function init() {
+        let a = new THREE.Mesh(new THREE.BoxGeometry(1,1,1));
+        let b = new THREE.Mesh(new THREE.BoxGeometry(1,1,1));
+        scene.add(csg.toMesh(csg.subtract(csg.fromMesh(a),csg.fromMesh(b)),a.material));
+
+        const animate = function () {
+  				requestAnimationFrame( animate );
+
+  				// plane.rotation.x += 0.01;
+  				// plane.rotation.y += 0.01;
+          controls.update();
+
+  				renderer.render( scene, camera );
+  			};
+
+        animate();
+
+      }
+      window.onload = init;
+    </script>
+  </head>
+  <body>
+  </body>
+  </html>
